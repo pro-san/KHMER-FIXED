@@ -226,6 +226,75 @@ export const EqualizerModal: React.FC<EqualizerModalProps> = ({ isOpen, onClose 
           ))}
         </div>
 
+        {/* Audio FX: Loudness Normalization & Crossfade Section */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {/* Loudness Normalization Toggle Card */}
+          <div className="flex items-center justify-between rounded-xl border border-slate-800/90 bg-slate-900/60 p-3.5">
+            <div className="flex items-center space-x-3">
+              <div className={`rounded-lg p-2 border transition-colors ${loudnessNorm ? 'bg-cyan-950 text-cyan-400 border-cyan-800/50' : 'bg-slate-800 text-slate-400 border-slate-700'}`}>
+                <Volume2 className="h-4 w-4" />
+              </div>
+              <div>
+                <div className="text-xs font-semibold text-slate-200 flex items-center gap-1.5">
+                  Loudness Normalization
+                  {loudnessNorm && <span className="text-[10px] font-mono text-cyan-400 font-bold bg-cyan-950/80 px-1.5 py-0.2 rounded border border-cyan-800/60">ACTIVE</span>}
+                </div>
+                <div className="text-[10px] text-slate-400">Automatically levels track volume spikes & dips</div>
+              </div>
+            </div>
+
+            {/* Switch Toggle */}
+            <button
+              onClick={handleToggleLoudnessNorm}
+              role="switch"
+              aria-checked={loudnessNorm}
+              className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                loudnessNorm ? 'bg-cyan-500' : 'bg-slate-800'
+              }`}
+              title="Toggle automatic loudness normalization leveling across tracks"
+            >
+              <span
+                className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-slate-950 shadow ring-0 transition duration-200 ease-in-out ${
+                  loudnessNorm ? 'translate-x-5 bg-white' : 'translate-x-0 bg-slate-400'
+                }`}
+              />
+            </button>
+          </div>
+
+          {/* 3D Spatial Audio Toggle Card */}
+          <div className="flex items-center justify-between rounded-xl border border-slate-800/90 bg-slate-900/60 p-3.5">
+            <div className="flex items-center space-x-3">
+              <div className={`rounded-lg p-2 border transition-colors ${spatialAudio ? 'bg-purple-950 text-purple-400 border-purple-800/50' : 'bg-slate-800 text-slate-400 border-slate-700'}`}>
+                <Sparkles className="h-4 w-4" />
+              </div>
+              <div>
+                <div className="text-xs font-semibold text-slate-200 flex items-center gap-1.5">
+                  3D Spatial Expansion
+                  {spatialAudio && <span className="text-[10px] font-mono text-purple-400 font-bold bg-purple-950/80 px-1.5 py-0.2 rounded border border-purple-800/60">ACTIVE</span>}
+                </div>
+                <div className="text-[10px] text-slate-400">Widens soundstage stereo positioning</div>
+              </div>
+            </div>
+
+            {/* Switch Toggle */}
+            <button
+              onClick={handleToggleSpatial}
+              role="switch"
+              aria-checked={spatialAudio}
+              className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                spatialAudio ? 'bg-purple-500' : 'bg-slate-800'
+              }`}
+              title="Toggle 3D spatial audio expansion"
+            >
+              <span
+                className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-slate-950 shadow ring-0 transition duration-200 ease-in-out ${
+                  spatialAudio ? 'translate-x-5 bg-white' : 'translate-x-0 bg-slate-400'
+                }`}
+              />
+            </button>
+          </div>
+        </div>
+
         {/* Audio Crossfade Section */}
         <div className="rounded-xl border border-slate-800/90 bg-slate-900/60 p-3.5 space-y-2.5">
           <div className="flex items-center justify-between">
@@ -273,9 +342,10 @@ export const EqualizerModal: React.FC<EqualizerModalProps> = ({ isOpen, onClose 
           </div>
         </div>
 
-        {/* Presets & 3D Spatial Switch */}
+        {/* Presets */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-slate-800 pt-4">
-          <div className="flex flex-wrap gap-1.5 max-w-md">
+          <div className="flex flex-wrap gap-1.5 max-w-full">
+            <span className="text-xs text-slate-400 self-center mr-1 font-medium">Equalizer Presets:</span>
             {PRESETS.map((preset) => (
               <button
                 key={preset.name}
@@ -289,33 +359,6 @@ export const EqualizerModal: React.FC<EqualizerModalProps> = ({ isOpen, onClose 
                 {preset.name}
               </button>
             ))}
-          </div>
-
-          <div className="flex items-center space-x-2">
-            <button
-              onClick={handleToggleLoudnessNorm}
-              className={`flex items-center space-x-2 rounded-xl border px-3 py-2 text-xs font-medium transition-all ${
-                loudnessNorm
-                  ? 'border-cyan-500 bg-cyan-950 text-cyan-300 shadow-lg shadow-cyan-900/30'
-                  : 'border-slate-800 bg-slate-900 text-slate-400 hover:text-slate-200'
-              }`}
-              title="Automatic gain & compressor loudness leveler across tracks"
-            >
-              <Volume2 className="h-4 w-4 text-cyan-400" />
-              <span>Loudness Leveler: {loudnessNorm ? 'ON' : 'OFF'}</span>
-            </button>
-
-            <button
-              onClick={handleToggleSpatial}
-              className={`flex items-center space-x-2 rounded-xl border px-3 py-2 text-xs font-medium transition-all ${
-                spatialAudio
-                  ? 'border-purple-500 bg-purple-950 text-purple-300 shadow-lg shadow-purple-900/30'
-                  : 'border-slate-800 bg-slate-900 text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              <Sparkles className="h-4 w-4 text-purple-400" />
-              <span>3D Spatial: {spatialAudio ? 'ON' : 'OFF'}</span>
-            </button>
           </div>
         </div>
       </div>
