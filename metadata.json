@@ -1,0 +1,6 @@
+{
+  "name": "Aura Stream",
+  "description": "High-fidelity music and video streaming application with offline playback, FLAC audio downloads, Web Audio EQ, synced lyrics, and AI playlists.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
