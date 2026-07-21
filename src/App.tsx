@@ -81,6 +81,7 @@ export default function App() {
 
   // Audio HTML Element Ref
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const hasCrossfadedRef = useRef<boolean>(false);
 
   // Sleep Timer Effect
   useEffect(() => {
@@ -150,7 +151,24 @@ export default function App() {
 
     audioEl.volume = isMuted ? 0 : volume;
 
-    const handleTimeUpdate = () => setCurrentTime(audioEl.currentTime);
+    const handleTimeUpdate = () => {
+      setCurrentTime(audioEl.currentTime);
+
+      // Auto Crossfade Trigger near track end
+      const crossfadeDur = audioEngine.getCrossfadeDuration();
+      const totalDur = audioEl.duration || currentMedia?.duration || 0;
+
+      if (
+        crossfadeDur > 0 &&
+        !isRepeat &&
+        totalDur > crossfadeDur + 1 &&
+        audioEl.currentTime >= totalDur - crossfadeDur &&
+        !hasCrossfadedRef.current
+      ) {
+        hasCrossfadedRef.current = true;
+        audioEngine.fadeOut(crossfadeDur);
+      }
+    };
     const handleLoadedMetadata = () => setDuration(audioEl.duration || currentMedia?.duration || 0);
     const handleEnded = () => {
       if (isRepeat) {
@@ -190,6 +208,8 @@ export default function App() {
     const audioEl = audioRef.current;
     if (!audioEl) return;
 
+    hasCrossfadedRef.current = false;
+
     // Pause current audio before changing src to prevent interrupted play request errors
     try {
       audioEl.pause();
@@ -214,6 +234,13 @@ export default function App() {
     audioEl.load();
     audioEngine.init(audioEl);
     audioEngine.resumeContext();
+
+    const crossfadeDur = audioEngine.getCrossfadeDuration();
+    if (crossfadeDur > 0) {
+      audioEngine.fadeIn(crossfadeDur);
+    } else {
+      audioEngine.resetGain();
+    }
 
     try {
       await audioEl.play();

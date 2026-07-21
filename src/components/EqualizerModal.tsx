@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Sliders, Volume2, Sparkles, Activity } from 'lucide-react';
+import { X, Sliders, Volume2, Sparkles, Activity, Waves } from 'lucide-react';
 import { audioEngine } from '../lib/audioEngine';
 import { EqualizerPreset } from '../types';
 
@@ -22,6 +22,7 @@ export const EqualizerModal: React.FC<EqualizerModalProps> = ({ isOpen, onClose 
   const [activePreset, setActivePreset] = useState<string>('Flat (Studio Direct)');
   const [spatialAudio, setSpatialAudio] = useState<boolean>(false);
   const [loudnessNorm, setLoudnessNorm] = useState<boolean>(() => audioEngine.isLoudnessNormalizationEnabled());
+  const [crossfadeSec, setCrossfadeSec] = useState<number>(() => audioEngine.getCrossfadeDuration());
   const [visualizerMode, setVisualizerMode] = useState<'bars' | 'wave' | 'spectrum'>('bars');
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -30,6 +31,7 @@ export const EqualizerModal: React.FC<EqualizerModalProps> = ({ isOpen, onClose 
   useEffect(() => {
     if (!isOpen) return;
     setLoudnessNorm(audioEngine.isLoudnessNormalizationEnabled());
+    setCrossfadeSec(audioEngine.getCrossfadeDuration());
 
     // Canvas animation loop
     const renderCanvas = () => {
@@ -149,6 +151,11 @@ export const EqualizerModal: React.FC<EqualizerModalProps> = ({ isOpen, onClose 
     audioEngine.setLoudnessNormalization(nextVal);
   };
 
+  const handleCrossfadeChange = (val: number) => {
+    setCrossfadeSec(val);
+    audioEngine.setCrossfadeDuration(val);
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
       <div className="relative w-full max-w-2xl rounded-2xl border border-slate-800 bg-slate-950 p-6 shadow-2xl space-y-6">
@@ -217,6 +224,53 @@ export const EqualizerModal: React.FC<EqualizerModalProps> = ({ isOpen, onClose 
               <span className="text-[10px] text-center text-slate-400 font-medium">{bandLabels[idx]}</span>
             </div>
           ))}
+        </div>
+
+        {/* Audio Crossfade Section */}
+        <div className="rounded-xl border border-slate-800/90 bg-slate-900/60 p-3.5 space-y-2.5">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2 text-xs font-semibold text-slate-200">
+              <Waves className="h-4 w-4 text-cyan-400" />
+              <span>Gapless Audio Crossfade Overlap</span>
+            </div>
+            <span className="font-mono text-xs font-bold text-cyan-300 bg-cyan-950/80 px-2.5 py-0.5 rounded-md border border-cyan-800/60">
+              {crossfadeSec === 0 ? 'Disabled (0s)' : `${crossfadeSec.toFixed(1)}s Overlap`}
+            </span>
+          </div>
+
+          <div className="flex items-center space-x-3">
+            <span className="text-[10px] text-slate-400 font-mono">0s</span>
+            <input
+              type="range"
+              min={0}
+              max={10}
+              step={0.5}
+              value={crossfadeSec}
+              onChange={(e) => handleCrossfadeChange(parseFloat(e.target.value))}
+              className="flex-1 h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-cyan-400"
+            />
+            <span className="text-[10px] text-slate-400 font-mono">10s</span>
+          </div>
+
+          {/* Quick Presets */}
+          <div className="flex items-center justify-between pt-1">
+            <span className="text-[11px] text-slate-400 font-medium">Overlap Presets:</span>
+            <div className="flex space-x-1.5">
+              {[0, 2, 3.5, 5, 8, 10].map((presetVal) => (
+                <button
+                  key={presetVal}
+                  onClick={() => handleCrossfadeChange(presetVal)}
+                  className={`rounded-md px-2.5 py-1 text-[10px] font-semibold transition-all border ${
+                    crossfadeSec === presetVal
+                      ? 'bg-cyan-500 text-slate-950 font-bold border-cyan-400 shadow-sm'
+                      : 'bg-slate-800 text-slate-400 border-slate-700 hover:text-slate-200'
+                  }`}
+                >
+                  {presetVal === 0 ? 'Off (0s)' : `${presetVal}s`}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
 
         {/* Presets & 3D Spatial Switch */}

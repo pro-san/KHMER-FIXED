@@ -6,15 +6,25 @@ export class AudioEngine {
   private eqFilters: BiquadFilterNode[] = [];
   private pannerNode: StereoPannerNode | null = null;
   private loudnessGainNode: GainNode | null = null;
+  private crossfadeGainNode: GainNode | null = null;
   private compressorNode: DynamicsCompressorNode | null = null;
   private loudnessNormalizationEnabled = false;
+  private crossfadeDurationSec = 3; // Default 3 seconds gapless crossfade (0 - 10s)
   private isInitialized = false;
 
   // EQ Frequencies: 60Hz, 230Hz, 910Hz, 4000Hz, 14000Hz
   private static FREQUENCIES = [60, 230, 910, 4000, 14000];
 
   constructor() {
-    // Lazy init on first play interaction
+    try {
+      const savedCrossfade = localStorage.getItem('aura_crossfade_duration');
+      if (savedCrossfade !== null) {
+        const parsed = parseFloat(savedCrossfade);
+        if (!isNaN(parsed)) {
+          this.crossfadeDurationSec = Math.max(0, Math.min(10, parsed));
+        }
+      }
+    } catch (_) {}
   }
 
   public init(audioEl: HTMLAudioElement) {
@@ -49,6 +59,10 @@ export class AudioEngine {
         this.pannerNode.pan.value = 0;
       }
 
+      // Create Gain Node for Crossfade Transitions
+      this.crossfadeGainNode = this.ctx.createGain();
+      this.crossfadeGainNode.gain.value = 1.0;
+
       // Create Gain Node and Dynamics Compressor Node for Loudness Normalization
       this.loudnessGainNode = this.ctx.createGain();
       this.loudnessGainNode.gain.value = this.loudnessNormalizationEnabled ? 0.85 : 1.0;
@@ -60,7 +74,7 @@ export class AudioEngine {
       this.compressorNode.attack.value = 0.003;
       this.compressorNode.release.value = 0.25;
 
-      // Connect source -> EQ filters in series -> Panner -> Loudness Gain -> Compressor -> Analyser -> Destination
+      // Connect source -> EQ filters in series -> Panner -> Loudness Gain -> Crossfade Gain -> Compressor -> Analyser -> Destination
       this.sourceNode = this.ctx.createMediaElementSource(audioEl);
 
       let lastNode: AudioNode = this.sourceNode;
@@ -75,7 +89,8 @@ export class AudioEngine {
       }
 
       lastNode.connect(this.loudnessGainNode);
-      this.loudnessGainNode.connect(this.compressorNode);
+      this.loudnessGainNode.connect(this.crossfadeGainNode);
+      this.crossfadeGainNode.connect(this.compressorNode);
       this.compressorNode.connect(this.analyserNode);
       this.analyserNode.connect(this.ctx.destination);
 
@@ -140,6 +155,51 @@ export class AudioEngine {
 
   public isLoudnessNormalizationEnabled(): boolean {
     return this.loudnessNormalizationEnabled;
+  }
+
+  public setCrossfadeDuration(sec: number) {
+    this.crossfadeDurationSec = Math.max(0, Math.min(10, sec));
+    try {
+      localStorage.setItem('aura_crossfade_duration', this.crossfadeDurationSec.toString());
+    } catch (_) {}
+  }
+
+  public getCrossfadeDuration(): number {
+    return this.crossfadeDurationSec;
+  }
+
+  public fadeIn(durationSec?: number) {
+    const duration = durationSec ?? this.crossfadeDurationSec;
+    if (!this.ctx || !this.crossfadeGainNode || duration <= 0) {
+      if (this.crossfadeGainNode) this.crossfadeGainNode.gain.value = 1.0;
+      return;
+    }
+    const now = this.ctx.currentTime;
+    this.crossfadeGainNode.gain.cancelScheduledValues(now);
+    this.crossfadeGainNode.gain.setValueAtTime(0.01, now);
+    this.crossfadeGainNode.gain.exponentialRampToValueAtTime(1.0, now + duration);
+  }
+
+  public fadeOut(durationSec?: number): number {
+    const duration = durationSec ?? this.crossfadeDurationSec;
+    if (!this.ctx || !this.crossfadeGainNode || duration <= 0) {
+      if (this.crossfadeGainNode) this.crossfadeGainNode.gain.value = 1.0;
+      return 0;
+    }
+    const now = this.ctx.currentTime;
+    const currentVal = this.crossfadeGainNode.gain.value || 1.0;
+    this.crossfadeGainNode.gain.cancelScheduledValues(now);
+    this.crossfadeGainNode.gain.setValueAtTime(Math.max(0.01, currentVal), now);
+    this.crossfadeGainNode.gain.exponentialRampToValueAtTime(0.001, now + duration);
+    return duration;
+  }
+
+  public resetGain() {
+    if (this.ctx && this.crossfadeGainNode) {
+      const now = this.ctx.currentTime;
+      this.crossfadeGainNode.gain.cancelScheduledValues(now);
+      this.crossfadeGainNode.gain.setValueAtTime(1.0, now);
+    }
   }
 
   public getFrequencyData(): Uint8Array {
